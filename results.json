@@ -1,0 +1,39 @@
+{
+  "analysisInfo" : {
+    "topCount" : 10,
+    "minWordLength" : 5,
+    "directory" : "src/test/resources/test-texts"
+  },
+  "words" : [ {
+    "word" : "development",
+    "count" : 6
+  }, {
+    "word" : "process",
+    "count" : 5
+  }, {
+    "word" : "engineering",
+    "count" : 4
+  }, {
+    "word" : "together",
+    "count" : 2
+  }, {
+    "word" : "testing",
+    "count" : 2
+  }, {
+    "word" : "improvement",
+    "count" : 2
+  }, {
+    "word" : "software",
+    "count" : 1
+  }, {
+    "word" : "achieve",
+    "count" : 1
+  }, {
+    "word" : "careful",
+    "count" : 1
+  }, {
+    "word" : "learning",
+    "count" : 1
+  } ],
+  "errors" : [ ]
+}
