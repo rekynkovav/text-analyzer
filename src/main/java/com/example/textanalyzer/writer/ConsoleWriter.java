@@ -6,10 +6,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+/**
+ * Writes analysis results to the console in a human-readable format.
+ *
+ * <p>Outputs a formatted list of top words with their frequencies,
+ * followed by any errors that occurred during processing.
+ *
+ * @author Text Analyzer Team
+ * @version 1.0
+ */
 @Component
 public class ConsoleWriter implements ResultWriter {
     private static final Logger logger = LoggerFactory.getLogger(ConsoleWriter.class);
 
+    /**
+     * Writes the analysis result to the console.
+     *
+     * <p>If no words match the criteria, displays an appropriate message.
+     * If errors occurred, they are displayed after the word list.
+     *
+     * @param result The analysis result to write to the console
+     */
     @Override
     public void write(AnalysisResult result) {
         logger.debug("Writing analysis result to console");

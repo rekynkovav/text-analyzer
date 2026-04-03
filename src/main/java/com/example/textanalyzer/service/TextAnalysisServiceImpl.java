@@ -21,15 +21,39 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of {@link TextAnalysisService} that performs text analysis
+ * using a {@link WordProcessor} for word extraction and processing.
+ *
+ * <p>This service walks through directories recursively, processes all
+ * .txt files, aggregates word frequencies across files, and handles
+ * errors gracefully without interrupting the entire analysis.
+ *
+ * @author Text Analyzer Team
+ * @version 1.0
+ */
 @Service
 public class TextAnalysisServiceImpl implements TextAnalysisService {
     private static final Logger logger = LoggerFactory.getLogger(TextAnalysisServiceImpl.class);
     private final WordProcessor wordProcessor;
 
+    /**
+     * Constructs a TextAnalysisServiceImpl with the required WordProcessor.
+     *
+     * @param wordProcessor The word processor component for text operations
+     */
     public TextAnalysisServiceImpl(WordProcessor wordProcessor) {
         this.wordProcessor = wordProcessor;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This implementation recursively walks the directory tree,
+     * processes each .txt file individually, and aggregates results.
+     * If the directory doesn't exist or contains no .txt files,
+     * appropriate errors are recorded in the result.
+     */
     @Override
     public AnalysisResult analyzeDirectory(String dirPath, int minLength, int topCount, Set<String> stopWords) {
         Map<String, Integer> totalWordCounts = new HashMap<>();
@@ -74,6 +98,13 @@ public class TextAnalysisServiceImpl implements TextAnalysisService {
         return new AnalysisResult(analysisInfo, topWords, errors);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This implementation reads the entire file into memory, which is
+     * suitable for reasonably sized text files. Empty files are skipped
+     * silently with a debug log message.
+     */
     @Override
     public Map<String, Integer> processFile(java.io.File file, int minLength, Set<String> stopWords) throws IOException {
         Map<String, Integer> wordCounts = new HashMap<>();
@@ -100,6 +131,13 @@ public class TextAnalysisServiceImpl implements TextAnalysisService {
         return wordCounts;
     }
 
+    /**
+     * Extracts the top N most frequent words from the word frequency map.
+     *
+     * @param wordCounts Map of words to their frequencies
+     * @param topCount Number of top words to return
+     * @return List of WordCount objects sorted by frequency (descending)
+     */
     private List<WordCount> getTopWords(Map<String, Integer> wordCounts, int topCount) {
         return wordCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
@@ -108,11 +146,28 @@ public class TextAnalysisServiceImpl implements TextAnalysisService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Creates an empty analysis result when no files can be processed.
+     *
+     * @param dirPath Directory path that was analyzed
+     * @param minLength Minimum word length parameter
+     * @param topCount Top count parameter
+     * @param errors List of errors encountered
+     * @return AnalysisResult with empty word list
+     */
     private AnalysisResult createEmptyResult(String dirPath, int minLength, int topCount, List<ErrorInfo> errors) {
         Map<String, Object> analysisInfo = createAnalysisInfo(dirPath, minLength, topCount);
         return new AnalysisResult(analysisInfo, Collections.emptyList(), errors);
     }
 
+    /**
+     * Creates a metadata map with analysis configuration parameters.
+     *
+     * @param dirPath Directory path that was analyzed
+     * @param minLength Minimum word length parameter
+     * @param topCount Top count parameter
+     * @return Map containing analysis metadata
+     */
     private Map<String, Object> createAnalysisInfo(String dirPath, int minLength, int topCount) {
         Map<String, Object> info = new HashMap<>();
         info.put("directory", dirPath);

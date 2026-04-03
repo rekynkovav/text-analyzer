@@ -1,22 +1,11 @@
-# Text Analyzer
+# Text Analyzer - Анализатор частоты слов
 
-A Spring Boot console application for analyzing word frequencies in text files.
+Консольное приложение для анализа текстовых файлов в формате .txt. 
+Приложение сканирует указанную директорию, находит все текстовые файлы, 
+подсчитывает частоту встречаемости слов и выводит N самых часто встречающихся слов.
 
-## Features
-
-- Analyze all `.txt` files in a directory
-- Filter words by minimum length
-- Exclude stop words from analysis
-- Output results to console or JSON file
-- Handle errors gracefully (missing files, access issues, etc.)
-- Configurable logging
-
-## Prerequisites
-
-- Java 17 or higher
-- Maven 3.6+
-
-## Building the Project
+пример для запуска
+java -jar target/text-analyzer-1.0.0.jar --dir src/test/resources/test-texts --min-length 5 --top 10
 
 ```bash
 mvn clean package

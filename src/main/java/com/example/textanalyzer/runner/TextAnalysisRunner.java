@@ -14,6 +14,17 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Application runner that orchestrates the text analysis process.
+ *
+ * <p>This component is automatically executed after the Spring Boot
+ * application starts. It parses command-line arguments, validates
+ * required parameters, loads stop words, performs the analysis,
+ * and outputs results either to console or to a JSON file.
+ *
+ * @author Text Analyzer Team
+ * @version 1.0
+ */
 @Component
 public class TextAnalysisRunner implements ApplicationRunner {
     private static final Logger logger = LoggerFactory.getLogger(TextAnalysisRunner.class);
@@ -22,6 +33,14 @@ public class TextAnalysisRunner implements ApplicationRunner {
     private final ConsoleWriter consoleWriter;
     private final JsonFileWriter jsonFileWriter;
 
+    /**
+     * Constructs the TextAnalysisRunner with required dependencies.
+     *
+     * @param analysisService Service for performing text analysis
+     * @param stopWordsService Service for loading stop words
+     * @param consoleWriter Writer for console output
+     * @param jsonFileWriter Writer for JSON file output
+     */
     public TextAnalysisRunner(TextAnalysisService analysisService,
                               StopWordsService stopWordsService,
                               ConsoleWriter consoleWriter,
@@ -32,6 +51,22 @@ public class TextAnalysisRunner implements ApplicationRunner {
         this.jsonFileWriter = jsonFileWriter;
     }
 
+    /**
+     * Entry point for the analysis process after application startup.
+     *
+     * <p>This method:
+     * <ol>
+     *   <li>Displays help if requested</li>
+     *   <li>Validates required parameters (--dir, --min-length, --top)</li>
+     *   <li>Parses numeric parameters</li>
+     *   <li>Loads stop words from optional file</li>
+     *   <li>Executes the analysis</li>
+     *   <li>Outputs results to console or JSON file</li>
+     * </ol>
+     *
+     * @param args Command-line arguments passed to the application
+     * @throws Exception If an unexpected error occurs during execution
+     */
     @Override
     public void run(ApplicationArguments args) throws Exception {
         if (args.containsOption("help")) {
@@ -83,6 +118,15 @@ public class TextAnalysisRunner implements ApplicationRunner {
         }
     }
 
+    /**
+     * Retrieves the value of a command-line option.
+     *
+     * <p>Supports both --option value and -option value formats.
+     *
+     * @param args The command-line arguments
+     * @param optionName The name of the option (without hyphens)
+     * @return The option value, or null if not found
+     */
     private String getOptionValue(ApplicationArguments args, String optionName) {
         if (args.containsOption(optionName)) {
             List<String> values = args.getOptionValues(optionName);
@@ -105,6 +149,16 @@ public class TextAnalysisRunner implements ApplicationRunner {
         return null;
     }
 
+    /**
+     * Validates the required command-line parameters.
+     *
+     * <p>Checks that --dir, --min-length, and --top are present,
+     * have valid values, and that the directory exists.
+     *
+     * @param args The command-line arguments
+     * @return {@code true} if all required parameters are valid,
+     *         {@code false} otherwise
+     */
     private boolean validateRequiredParameters(ApplicationArguments args) {
         if (args.containsOption("help")) {
             return true;
@@ -158,6 +212,12 @@ public class TextAnalysisRunner implements ApplicationRunner {
         return true;
     }
 
+    /**
+     * Prints the help message to the console.
+     *
+     * <p>Displays usage instructions, parameter descriptions,
+     * and examples for using the Text Analyzer tool.
+     */
     private void printHelp() {
         System.out.println("""
             \nText Analyzer - Word Frequency Analysis Tool
