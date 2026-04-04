@@ -9,11 +9,11 @@ import org.springframework.stereotype.Component;
 /**
  * Writes analysis results to the console in a human-readable format.
  *
- * <p>Outputs a formatted list of top words with their frequencies,
- * followed by any errors that occurred during processing.
+ * <p>Outputs execution statistics, a formatted list of top words with
+ * their frequencies, followed by any errors that occurred during processing.
  *
  * @author Text Analyzer Team
- * @version 1.0
+ * @version 2.0
  */
 @Component
 public class ConsoleWriter implements ResultWriter {
@@ -22,8 +22,8 @@ public class ConsoleWriter implements ResultWriter {
     /**
      * Writes the analysis result to the console.
      *
-     * <p>If no words match the criteria, displays an appropriate message.
-     * If errors occurred, they are displayed after the word list.
+     * <p>Includes execution mode, number of processed files, execution time,
+     * top words list, and any errors encountered.
      *
      * @param result The analysis result to write to the console
      */
@@ -31,38 +31,46 @@ public class ConsoleWriter implements ResultWriter {
     public void write(AnalysisResult result) {
         logger.debug("Writing analysis result to console");
 
-        if (result.getWords().isEmpty()) {
-            logger.info("No words found matching the criteria");
-            System.out.println("No words found matching the criteria.");
-
-            if (!result.getErrors().isEmpty()) {
-                logger.warn("Found {} errors during analysis", result.getErrors().size());
-                System.out.println("\nErrors encountered:");
-                result.getErrors().forEach(error -> {
-                    logger.debug("Error - File: {}, Message: {}", error.getFile(), error.getMessage());
-                    System.out.printf("  - %s: %s%n", error.getFile(), error.getMessage());
-                });
+        if (result.getMode() != null && result.getProcessedFiles() != null && result.getExecutionTimeMs() != null) {
+            if ("multi".equals(result.getMode())) {
+                System.out.printf("%nMode: MULTI (%d workers)%n", result.getThreads());
+            } else {
+                System.out.printf("%nMode: SINGLE%n");
             }
-            return;
+            System.out.printf("Processed %d files in %d ms%n",
+                    result.getProcessedFiles(), result.getExecutionTimeMs());
         }
 
-        logger.info("Writing top {} words to console", result.getWords().size());
-        System.out.println("\nTop " + result.getWords().size() + " most frequent words:");
-        System.out.println("=".repeat(40));
+        if (result.getWords().isEmpty()) {
+            System.out.println("\nNo words found matching the criteria.");
+        } else {
+            Integer minLength = null;
+            if (result.getAnalysisInfo() != null && result.getAnalysisInfo().containsKey("minWordLength")) {
+                minLength = (Integer) result.getAnalysisInfo().get("minWordLength");
+            }
 
-        int rank = 1;
-        for (WordCount wc : result.getWords()) {
-            logger.trace("Word #{}: {} - {}", rank, wc.getWord(), wc.getCount());
-            System.out.printf("%d. %s — %d%n", rank++, wc.getWord(), wc.getCount());
+            if (minLength != null) {
+                System.out.printf("%nTop %d words (min length = %d):%n",
+                        result.getWords().size(), minLength);
+            } else {
+                System.out.printf("%nTop %d words:%n", result.getWords().size());
+            }
+            System.out.println("=".repeat(40));
+
+            int rank = 1;
+            for (WordCount wc : result.getWords()) {
+                logger.trace("Word #{}: {} - {}", rank, wc.getWord(), wc.getCount());
+                System.out.printf("%d. %s — %d%n", rank++, wc.getWord(), wc.getCount());
+            }
         }
 
-        if (!result.getErrors().isEmpty()) {
+        if (result.getErrors() != null && !result.getErrors().isEmpty()) {
             logger.warn("Analysis completed with {} errors", result.getErrors().size());
             System.out.println("\nErrors encountered:");
-            result.getErrors().forEach(error -> {
+            for (var error : result.getErrors()) {
                 logger.debug("Error - File: {}, Message: {}", error.getFile(), error.getMessage());
                 System.out.printf("  - %s: %s%n", error.getFile(), error.getMessage());
-            });
+            }
         }
 
         logger.info("Console output completed successfully");

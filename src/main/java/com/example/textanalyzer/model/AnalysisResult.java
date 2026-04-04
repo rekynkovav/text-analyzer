@@ -13,12 +13,16 @@ import java.util.Map;
  * and error information for failed file operations.
  *
  * @author Text Analyzer Team
- * @version 1.0
+ * @version 2.0
  */
 public class AnalysisResult {
     private Map<String, Object> analysisInfo;
     private List<WordCount> words;
     private List<ErrorInfo> errors;
+    private String mode;
+    private Integer threads;
+    private Integer processedFiles;
+    private Long executionTimeMs;
 
     /**
      * Default constructor required for JSON deserialization.
@@ -39,6 +43,33 @@ public class AnalysisResult {
         this.analysisInfo = analysisInfo;
         this.words = words;
         this.errors = errors;
+    }
+
+    /**
+     * Constructs a complete analysis result with multi-threading metadata.
+     *
+     * @param analysisInfo Map containing analysis metadata
+     * @param words List of word frequency objects
+     * @param errors List of errors encountered
+     * @param mode Processing mode ("single" or "multi")
+     * @param threads Number of threads used (1 for single mode)
+     * @param processedFiles Number of successfully processed files
+     * @param executionTimeMs Total execution time in milliseconds
+     */
+    public AnalysisResult(Map<String, Object> analysisInfo,
+                          List<WordCount> words,
+                          List<ErrorInfo> errors,
+                          String mode,
+                          Integer threads,
+                          Integer processedFiles,
+                          Long executionTimeMs) {
+        this.analysisInfo = analysisInfo;
+        this.words = words;
+        this.errors = errors;
+        this.mode = mode;
+        this.threads = threads;
+        this.processedFiles = processedFiles;
+        this.executionTimeMs = executionTimeMs;
     }
 
     /**
@@ -97,5 +128,81 @@ public class AnalysisResult {
      */
     public void setErrors(List<ErrorInfo> errors) {
         this.errors = errors;
+    }
+
+    /**
+     * Returns the processing mode.
+     *
+     * @return "single" or "multi"
+     */
+    @JsonProperty("mode")
+    public String getMode() {
+        return mode;
+    }
+
+    /**
+     * Sets the processing mode.
+     *
+     * @param mode "single" or "multi"
+     */
+    public void setMode(String mode) {
+        this.mode = mode;
+    }
+
+    /**
+     * Returns the number of threads used.
+     *
+     * @return Number of threads (1 for single mode)
+     */
+    @JsonProperty("threads")
+    public Integer getThreads() {
+        return threads;
+    }
+
+    /**
+     * Sets the number of threads used.
+     *
+     * @param threads Number of threads
+     */
+    public void setThreads(Integer threads) {
+        this.threads = threads;
+    }
+
+    /**
+     * Returns the number of successfully processed files.
+     *
+     * @return Count of processed files
+     */
+    @JsonProperty("processedFiles")
+    public Integer getProcessedFiles() {
+        return processedFiles;
+    }
+
+    /**
+     * Sets the number of successfully processed files.
+     *
+     * @param processedFiles Count of processed files
+     */
+    public void setProcessedFiles(Integer processedFiles) {
+        this.processedFiles = processedFiles;
+    }
+
+    /**
+     * Returns the total execution time.
+     *
+     * @return Execution time in milliseconds
+     */
+    @JsonProperty("executionTimeMs")
+    public Long getExecutionTimeMs() {
+        return executionTimeMs;
+    }
+
+    /**
+     * Sets the total execution time.
+     *
+     * @param executionTimeMs Execution time in milliseconds
+     */
+    public void setExecutionTimeMs(Long executionTimeMs) {
+        this.executionTimeMs = executionTimeMs;
     }
 }
