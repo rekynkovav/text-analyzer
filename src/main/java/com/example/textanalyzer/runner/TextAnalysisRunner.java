@@ -29,15 +29,13 @@ import java.util.stream.Collectors;
 /**
  * Application runner that orchestrates the text analysis process.
  *
- * <p>This component is automatically executed after the Spring Boot
- * application starts. It parses command-line arguments, validates
- * required parameters, loads stop words, performs the analysis
- * (either single-threaded or multi-threaded), and outputs results.
+ * <p>This component is disabled by default in REST mode.
+ * To run in CLI mode, set spring.profiles.active=cli
  *
  * @author Text Analyzer Team
  * @version 2.0
  */
-@Component
+//@Component
 public class TextAnalysisRunner implements ApplicationRunner {
     private static final Logger logger = LoggerFactory.getLogger(TextAnalysisRunner.class);
     private static final int DEFAULT_THREADS = 2;

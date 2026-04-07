@@ -1,5 +1,6 @@
 package com.example.textanalyzer.integration;
 
+import com.example.textanalyzer.config.ProcessorConfig;
 import com.example.textanalyzer.processor.ParallelFileProcessor;
 import com.example.textanalyzer.processor.WordProcessor;
 import com.example.textanalyzer.service.StopWordsServiceImpl;
@@ -23,6 +24,7 @@ class TextAnalysisIntegrationTest {
     private ParallelFileProcessor parallelFileProcessor;
     private WordProcessor wordProcessor;
     private StopWordsServiceImpl stopWordsService;
+    private ProcessorConfig config;
 
     @TempDir
     Path tempDir;
@@ -31,7 +33,9 @@ class TextAnalysisIntegrationTest {
     void setUp() {
         wordProcessor = new WordProcessor();
         textAnalysisService = new TextAnalysisServiceImpl(wordProcessor);
-        parallelFileProcessor = new ParallelFileProcessor(textAnalysisService);
+        config = new ProcessorConfig();
+        config.setExecutorTimeoutSeconds(120);
+        parallelFileProcessor = new ParallelFileProcessor(textAnalysisService, config);
         stopWordsService = new StopWordsServiceImpl();
     }
 

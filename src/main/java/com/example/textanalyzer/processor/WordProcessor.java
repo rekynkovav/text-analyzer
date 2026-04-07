@@ -20,8 +20,14 @@ import java.util.regex.Pattern;
  * <p>The word pattern matches Unicode letters and handles apostrophes
  * for contractions (e.g., "don't").
  *
+ * <p>Performance optimizations in version 2.0:
+ * <ul>
+ *   <li>Removed TRACE-level logging from hot path methods</li>
+ *   <li>Simplified validation and normalization logic</li>
+ * </ul>
+ *
  * @author Text Analyzer Team
- * @version 1.0
+ * @version 2.0
  */
 @Component
 public class WordProcessor {
@@ -36,17 +42,16 @@ public class WordProcessor {
     /**
      * Validates whether a word meets the minimum length requirement.
      *
+     * <p>This method is called frequently during text processing, so it has
+     * been optimized to avoid unnecessary operations and logging overhead.
+     *
      * @param word The word to validate (can be null)
      * @param minLength The minimum required length (must be positive)
      * @return {@code true} if the word is not null and its length is >= minLength,
      *         {@code false} otherwise
      */
     public boolean isValidWord(String word, int minLength) {
-        boolean isValid = word != null && word.length() >= minLength;
-        if (logger.isTraceEnabled() && word != null) {
-            logger.trace("Word '{}' (length {}) is valid: {}", word, word.length(), isValid);
-        }
-        return isValid;
+        return word != null && word.length() >= minLength;
     }
 
     /**
@@ -55,17 +60,14 @@ public class WordProcessor {
      * <p>This enables case-insensitive word counting (e.g., "Word" and "word"
      * are treated as the same word).
      *
+     * <p>This method is called for every word in the text, so it has been
+     * optimized to use a ternary operator for minimal overhead.
+     *
      * @param word The word to normalize (can be null)
      * @return The lowercase version of the word, or {@code null} if input is null
      */
     public String normalizeWord(String word) {
-        if (word == null) {
-            logger.trace("Normalizing null word");
-            return null;
-        }
-        String normalized = word.toLowerCase();
-        logger.trace("Normalized '{}' to '{}'", word, normalized);
-        return normalized;
+        return word == null ? null : word.toLowerCase();
     }
 
     /**
