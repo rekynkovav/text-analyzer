@@ -1,8 +1,11 @@
 package com.example.textanalyzer.runner;
 
 import com.example.textanalyzer.model.AnalysisResult;
+import com.example.textanalyzer.model.ErrorInfo;
+import com.example.textanalyzer.model.ProcessingMode;
+import com.example.textanalyzer.model.WordCount;
+import com.example.textanalyzer.processor.ParallelFileProcessor;
 import com.example.textanalyzer.service.StopWordsService;
-import com.example.textanalyzer.service.TextAnalysisService;
 import com.example.textanalyzer.writer.ConsoleWriter;
 import com.example.textanalyzer.writer.JsonFileWriter;
 import org.slf4j.Logger;
@@ -11,58 +14,59 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Application runner that orchestrates the text analysis process.
  *
  * <p>This component is automatically executed after the Spring Boot
  * application starts. It parses command-line arguments, validates
- * required parameters, loads stop words, performs the analysis,
- * and outputs results either to console or to a JSON file.
+ * required parameters, loads stop words, performs the analysis
+ * (either single-threaded or multi-threaded), and outputs results.
  *
  * @author Text Analyzer Team
- * @version 1.0
+ * @version 2.0
  */
 @Component
 public class TextAnalysisRunner implements ApplicationRunner {
     private static final Logger logger = LoggerFactory.getLogger(TextAnalysisRunner.class);
-    private final TextAnalysisService analysisService;
+    private static final int DEFAULT_THREADS = 2;
+
     private final StopWordsService stopWordsService;
     private final ConsoleWriter consoleWriter;
     private final JsonFileWriter jsonFileWriter;
+    private final ParallelFileProcessor parallelFileProcessor;
 
     /**
      * Constructs the TextAnalysisRunner with required dependencies.
      *
-     * @param analysisService Service for performing text analysis
      * @param stopWordsService Service for loading stop words
      * @param consoleWriter Writer for console output
      * @param jsonFileWriter Writer for JSON file output
+     * @param parallelFileProcessor Processor for parallel file handling
      */
-    public TextAnalysisRunner(TextAnalysisService analysisService,
-                              StopWordsService stopWordsService,
+    public TextAnalysisRunner(StopWordsService stopWordsService,
                               ConsoleWriter consoleWriter,
-                              JsonFileWriter jsonFileWriter) {
-        this.analysisService = analysisService;
+                              JsonFileWriter jsonFileWriter,
+                              ParallelFileProcessor parallelFileProcessor) {
         this.stopWordsService = stopWordsService;
         this.consoleWriter = consoleWriter;
         this.jsonFileWriter = jsonFileWriter;
+        this.parallelFileProcessor = parallelFileProcessor;
     }
 
     /**
      * Entry point for the analysis process after application startup.
-     *
-     * <p>This method:
-     * <ol>
-     *   <li>Displays help if requested</li>
-     *   <li>Validates required parameters (--dir, --min-length, --top)</li>
-     *   <li>Parses numeric parameters</li>
-     *   <li>Loads stop words from optional file</li>
-     *   <li>Executes the analysis</li>
-     *   <li>Outputs results to console or JSON file</li>
-     * </ol>
      *
      * @param args Command-line arguments passed to the application
      * @throws Exception If an unexpected error occurs during execution
@@ -81,32 +85,83 @@ public class TextAnalysisRunner implements ApplicationRunner {
         }
 
         String dirPath = getOptionValue(args, "dir");
-        String minLengthStr = getOptionValue(args, "min-length");
-        String topCountStr = getOptionValue(args, "top");
-
-        if (dirPath == null || minLengthStr == null || topCountStr == null) {
-            logger.error("Required parameters are missing");
-            System.exit(1);
-            return;
-        }
-
-        int minLength = Integer.parseInt(minLengthStr);
-        int topCount = Integer.parseInt(topCountStr);
+        int minLength = Integer.parseInt(getOptionValue(args, "min-length"));
+        int topCount = Integer.parseInt(getOptionValue(args, "top"));
 
         String stopwordsPath = getOptionValue(args, "stopwords");
         String outputPath = getOptionValue(args, "output");
+        ProcessingMode mode = ProcessingMode.fromString(getOptionValue(args, "mode"));
+        int threads = parseThreads(getOptionValue(args, "threads"));
 
-        logger.info("Starting text analysis - Directory: {}, Min length: {}, Top: {}",
-                dirPath, minLength, topCount);
+        logger.info("Starting text analysis - Directory: {}, Min length: {}, Top: {}, Mode: {}, Threads: {}",
+                dirPath, minLength, topCount, mode.getValue(), threads);
 
         Set<String> stopWords = stopWordsService.loadStopWords(stopwordsPath);
         logger.info("Loaded {} stop words", stopWords.size());
 
-        AnalysisResult result = analysisService.analyzeDirectory(dirPath, minLength, topCount, stopWords);
+        List<Path> txtFiles = getTextFiles(dirPath);
+        if (txtFiles.isEmpty()) {
+            logger.warn("No .txt files found in directory: {}", dirPath);
+            AnalysisResult emptyResult = createEmptyResult(dirPath, minLength, topCount,
+                    mode.getValue(), threads, 0, 0L);
+            emptyResult.setErrors(List.of(new ErrorInfo(dirPath, "No .txt files found")));
+            outputResult(emptyResult, outputPath);
+            return;
+        }
 
+        logger.info("Found {} .txt files to process", txtFiles.size());
+
+        AnalysisResult result = executeAnalysis(dirPath, minLength, topCount,
+                stopWords, mode, threads, txtFiles);
+
+        outputResult(result, outputPath);
+    }
+
+    /**
+     * Executes analysis in the specified mode.
+     */
+    private AnalysisResult executeAnalysis(String dirPath, int minLength, int topCount,
+                                           Set<String> stopWords, ProcessingMode mode,
+                                           int threads, List<Path> txtFiles) {
+        ParallelFileProcessor.ProcessingResult processingResult;
+
+        if (mode == ProcessingMode.SINGLE) {
+            logger.info("Running in SINGLE mode");
+            processingResult = parallelFileProcessor.processFilesSequential(txtFiles, minLength, stopWords);
+        } else {
+            logger.info("Running in MULTI mode with {} threads", threads);
+            processingResult = parallelFileProcessor.processFilesParallel(txtFiles, minLength, stopWords, threads);
+        }
+
+        List<WordCount> topWords = getTopWords(processingResult.wordCounts, topCount);
+        Map<String, Object> analysisInfo = createAnalysisInfo(dirPath, minLength, topCount);
+
+        printSummary(mode, threads, processingResult.processedFiles, processingResult.executionTimeMs);
+
+        return new AnalysisResult(analysisInfo, topWords, processingResult.errors,
+                mode.getValue(), mode == ProcessingMode.SINGLE ? 1 : threads,
+                processingResult.processedFiles, processingResult.executionTimeMs);
+    }
+
+    /**
+     * Prints execution summary to console.
+     */
+    private void printSummary(ProcessingMode mode, int threads, int processedFiles, long executionTimeMs) {
+        if (mode == ProcessingMode.MULTI) {
+            System.out.printf("%nMode: MULTI (%d workers)%n", threads);
+        } else {
+            System.out.printf("%nMode: SINGLE%n");
+        }
+        System.out.printf("Processed %d files in %d ms%n", processedFiles, executionTimeMs);
+    }
+
+    /**
+     * Outputs result to console or JSON file.
+     */
+    private void outputResult(AnalysisResult result, String outputPath) {
         if (outputPath != null && !outputPath.trim().isEmpty()) {
             jsonFileWriter.write(result, outputPath);
-            System.out.println("Results saved to: " + outputPath);
+            System.out.println("\nResults saved to: " + outputPath);
         } else {
             consoleWriter.write(result);
         }
@@ -120,8 +175,6 @@ public class TextAnalysisRunner implements ApplicationRunner {
 
     /**
      * Retrieves the value of a command-line option.
-     *
-     * <p>Supports both --option value and -option value formats.
      *
      * @param args The command-line arguments
      * @param optionName The name of the option (without hyphens)
@@ -138,7 +191,7 @@ public class TextAnalysisRunner implements ApplicationRunner {
         String[] sourceArgs = args.getSourceArgs();
         for (int i = 0; i < sourceArgs.length - 1; i++) {
             if (("--" + optionName).equals(sourceArgs[i]) ||
-                ("-" + optionName).equals(sourceArgs[i])) {
+                    ("-" + optionName).equals(sourceArgs[i])) {
                 String value = sourceArgs[i + 1];
                 if (!value.startsWith("-")) {
                     return value;
@@ -152,12 +205,8 @@ public class TextAnalysisRunner implements ApplicationRunner {
     /**
      * Validates the required command-line parameters.
      *
-     * <p>Checks that --dir, --min-length, and --top are present,
-     * have valid values, and that the directory exists.
-     *
      * @param args The command-line arguments
-     * @return {@code true} if all required parameters are valid,
-     *         {@code false} otherwise
+     * @return {@code true} if all required parameters are valid
      */
     private boolean validateRequiredParameters(ApplicationArguments args) {
         if (args.containsOption("help")) {
@@ -199,12 +248,12 @@ public class TextAnalysisRunner implements ApplicationRunner {
             return false;
         }
 
-        java.nio.file.Path path = java.nio.file.Paths.get(dirPath);
-        if (!java.nio.file.Files.exists(path)) {
+        Path path = Paths.get(dirPath);
+        if (!Files.exists(path)) {
             logger.error("Directory does not exist: {}", dirPath);
             return false;
         }
-        if (!java.nio.file.Files.isDirectory(path)) {
+        if (!Files.isDirectory(path)) {
             logger.error("Path is not a directory: {}", dirPath);
             return false;
         }
@@ -213,10 +262,85 @@ public class TextAnalysisRunner implements ApplicationRunner {
     }
 
     /**
-     * Prints the help message to the console.
+     * Parses the threads parameter.
      *
-     * <p>Displays usage instructions, parameter descriptions,
-     * and examples for using the Text Analyzer tool.
+     * @param threadsStr Threads parameter value
+     * @return Number of threads (default 2 if invalid)
+     */
+    private int parseThreads(String threadsStr) {
+        if (threadsStr == null) {
+            return DEFAULT_THREADS;
+        }
+        try {
+            int threads = Integer.parseInt(threadsStr);
+            if (threads > 0) {
+                return threads;
+            }
+            logger.warn("--threads must be positive, using default: {}", DEFAULT_THREADS);
+        } catch (NumberFormatException e) {
+            logger.warn("Invalid --threads value: {}, using default: {}", threadsStr, DEFAULT_THREADS);
+        }
+        return DEFAULT_THREADS;
+    }
+
+    /**
+     * Retrieves all .txt files from the directory recursively.
+     *
+     * @param dirPath Directory path
+     * @return List of Path objects for .txt files
+     * @throws IOException If directory cannot be read
+     */
+    private List<Path> getTextFiles(String dirPath) throws IOException {
+        Path directory = Paths.get(dirPath);
+        return Files.walk(directory)
+                .filter(Files::isRegularFile)
+                .filter(path -> path.toString().toLowerCase().endsWith(".txt"))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Extracts the top N most frequent words from the word frequency map.
+     *
+     * @param wordCounts Map of words to their frequencies
+     * @param topCount Number of top words to return
+     * @return List of WordCount objects sorted by frequency (descending)
+     */
+    private List<WordCount> getTopWords(Map<String, Integer> wordCounts, int topCount) {
+        return wordCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(topCount)
+                .map(entry -> new WordCount(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Creates a metadata map with analysis configuration parameters.
+     *
+     * @param dirPath Directory path that was analyzed
+     * @param minLength Minimum word length parameter
+     * @param topCount Top count parameter
+     * @return Map containing analysis metadata
+     */
+    private Map<String, Object> createAnalysisInfo(String dirPath, int minLength, int topCount) {
+        Map<String, Object> info = new HashMap<>();
+        info.put("directory", dirPath);
+        info.put("minWordLength", minLength);
+        info.put("topCount", topCount);
+        return info;
+    }
+
+    /**
+     * Creates an empty analysis result.
+     */
+    private AnalysisResult createEmptyResult(String dirPath, int minLength, int topCount,
+                                             String mode, int threads, int processedFiles, long executionTimeMs) {
+        Map<String, Object> analysisInfo = createAnalysisInfo(dirPath, minLength, topCount);
+        return new AnalysisResult(analysisInfo, Collections.emptyList(), new ArrayList<>(),
+                mode, threads, processedFiles, executionTimeMs);
+    }
+
+    /**
+     * Prints the help message to the console.
      */
     private void printHelp() {
         System.out.println("""
@@ -225,7 +349,8 @@ public class TextAnalysisRunner implements ApplicationRunner {
             
             DESCRIPTION:
                 Analyzes text files (.txt) in a directory, counts word frequencies,
-                and displays the most common words.
+                and displays the most common words. Supports both single-threaded
+                and multi-threaded processing modes.
             
             USAGE:
                 java -jar text-analyzer.jar [OPTIONS]
@@ -238,11 +363,19 @@ public class TextAnalysisRunner implements ApplicationRunner {
             OPTIONAL PARAMETERS:
                 --output <path>       Path to save results as JSON file
                 --stopwords <path>    Path to file containing stop words (one per line)
+                --mode single|multi   Processing mode (default: multi)
+                --threads <int>       Number of threads for multi mode (default: 2)
                 --help                Display this help message
             
             EXAMPLES:
-                # Basic usage (output to console)
+                # Basic usage (multi-threaded, default 2 threads)
                 java -jar text-analyzer.jar --dir ./texts --min-length 5 --top 10
+                
+                # Multi-threaded with 8 threads
+                java -jar text-analyzer.jar --dir ./texts --min-length 5 --top 10 --mode multi --threads 8
+                
+                # Single-threaded mode for comparison
+                java -jar text-analyzer.jar --dir ./texts --min-length 5 --top 10 --mode single
                 
                 # With stopwords and JSON output
                 java -jar text-analyzer.jar --dir ./texts --min-length 5 --top 10 \\
@@ -259,8 +392,8 @@ public class TextAnalysisRunner implements ApplicationRunner {
                 with
             
             OUTPUT FORMATS:
-                Console: Simple formatted list with rankings
-                JSON: Structured format with analysis metadata and errors
+                Console: Formatted list with mode, timing, rankings, and errors
+                JSON: Structured format with analysis metadata, words, and errors
             
             NOTES:
                 - Words are case-insensitive (e.g., "Word" and "word" are the same)
@@ -268,6 +401,7 @@ public class TextAnalysisRunner implements ApplicationRunner {
                 - Only .txt files are processed
                 - Empty files are skipped silently
                 - Errors are reported but don't stop processing
+                - Multi-threaded mode can significantly improve performance on multi-core systems
             """);
     }
 }

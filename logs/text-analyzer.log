@@ -6153,3 +6153,23 @@
 2026-04-03 21:08:29 - TRACE - Normalized 'analyzer' to 'analyzer'
 2026-04-03 21:08:29 - TRACE - Word 'analyzer' (length 8) is valid: true
 2026-04-03 21:08:29 - DEBUG - Processed file: nested.txt - found 8 unique words
+2026-04-04 19:38:53 - INFO - Starting TextAnalyzerApplicationTests using Java 24.0.2 with PID 8888 (started by Suveren in C:\Users\Suveren\IdeaProjects\text-analyzer)
+2026-04-04 19:38:53 - DEBUG - Running with Spring Boot v3.5.13, Spring v6.2.17
+2026-04-04 19:38:53 - INFO - No active profile set, falling back to 1 default profile: "default"
+2026-04-04 19:38:54 - INFO - Started TextAnalyzerApplicationTests in 2.777 seconds (process running for 6.758)
+2026-04-04 19:38:54 - ERROR - Missing required parameter: --dir
+2026-04-04 19:42:48 - INFO - Starting TextAnalyzerApplicationTests using Java 24.0.2 with PID 11300 (started by Suveren in C:\Users\Suveren\IdeaProjects\text-analyzer)
+2026-04-04 19:42:48 - DEBUG - Running with Spring Boot v3.5.13, Spring v6.2.17
+2026-04-04 19:42:48 - INFO - No active profile set, falling back to 1 default profile: "default"
+2026-04-04 19:42:49 - INFO - Started TextAnalyzerApplicationTests in 2.926 seconds (process running for 5.636)
+2026-04-04 19:42:49 - ERROR - Missing required parameter: --dir
+2026-04-04 19:43:56 - INFO - Starting TextAnalyzerApplicationTests using Java 24.0.2 with PID 11588 (started by Suveren in C:\Users\Suveren\IdeaProjects\text-analyzer)
+2026-04-04 19:43:56 - DEBUG - Running with Spring Boot v3.5.13, Spring v6.2.17
+2026-04-04 19:43:56 - INFO - No active profile set, falling back to 1 default profile: "default"
+2026-04-04 19:43:58 - INFO - Started TextAnalyzerApplicationTests in 2.948 seconds (process running for 5.765)
+2026-04-04 19:43:58 - ERROR - Missing required parameter: --dir
+2026-04-04 19:47:40 - INFO - Starting TextAnalyzerApplicationTests using Java 24.0.2 with PID 12856 (started by Suveren in C:\Users\Suveren\IdeaProjects\text-analyzer)
+2026-04-04 19:47:40 - DEBUG - Running with Spring Boot v3.5.13, Spring v6.2.17
+2026-04-04 19:47:40 - INFO - No active profile set, falling back to 1 default profile: "default"
+2026-04-04 19:47:42 - INFO - Started TextAnalyzerApplicationTests in 2.939 seconds (process running for 5.778)
+2026-04-04 19:47:42 - ERROR - Missing required parameter: --dir

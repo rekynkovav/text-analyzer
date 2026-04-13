@@ -1,6 +1,8 @@
 spring:
-  application:
-    name: text-analyzer
+  main:
+    web-application-type: none
+    banner-mode: off
+    lazy-initialization: true
 
 logging:
   level:
@@ -9,8 +11,3 @@ logging:
     com.example.textanalyzer.writer: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %level - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} - %level - %msg%n"
-  file:
-    name: logs/text-analyzer.log
-    max-size: 10MB
-    max-history: 7
