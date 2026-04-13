@@ -1,5 +1,6 @@
 package com.example.textanalyzer.processor;
 
+import com.example.textanalyzer.config.ProcessorConfig;
 import com.example.textanalyzer.service.TextAnalysisService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +27,9 @@ class ParallelFileProcessorTest {
     @Mock
     private TextAnalysisService analysisService;
 
+    @Mock
+    private ProcessorConfig config;
+
     private ParallelFileProcessor processor;
 
     @TempDir
@@ -33,7 +37,8 @@ class ParallelFileProcessorTest {
 
     @BeforeEach
     void setUp() {
-        processor = new ParallelFileProcessor(analysisService);
+        lenient().when(config.getExecutorTimeoutSeconds()).thenReturn(120);
+        processor = new ParallelFileProcessor(analysisService, config);
     }
 
     @Test
